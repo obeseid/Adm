@@ -1,4 +1,4 @@
--- gfgfgfggggggggg
+-- EXECUTOR-ONLY SCRIPT - Will NOT work in published games or normal LocalScripts
 -- For testing purposes only in private servers with an executor
 
 local Players = game:GetService("Players")
@@ -145,25 +145,7 @@ local function autoClickBlock()
 			end
 		end
 		
-		local blockButton = buttons:WaitForChild("3", 3)
-		if not blockButton then 
-			warn("❌ Button '3' not found - trying to find block button by text instead")
-			-- Try to find it by searching for "Block" text
-			for _, child in pairs(buttons:GetChildren()) do
-				if child:IsA("TextButton") and child.Text and child.Text:lower():find("block") then
-					blockButton = child
-					print("✅ Found block button by text:", child.Name)
-					break
-				end
-			end
-			
-			if not blockButton then
-				warn("❌ Could not find block button at all")
-				return
-			end
-		else
-			print("✅ Button '3' found!")
-		end
+
 		
 		print("=== Block Button Info ===")
 		print("Name:", blockButton.Name)
