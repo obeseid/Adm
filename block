@@ -1,0 +1,266 @@
+-- EXECUTOR-ONLY SCRIPT - Will NOT work in published games or normal LocalScripts
+-- For testing purposes only in private servers with an executor
+
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create the main ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PlayerListGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Create main frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = mainFrame
+
+-- Create title label
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "TitleLabel"
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleLabel.BorderSizePixel = 0
+titleLabel.Text = "Auto-Block Players (Executor)"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 18
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 10)
+titleCorner.Parent = titleLabel
+
+-- Create close button
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -35, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+closeButton.BorderSizePixel = 0
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 16
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 5)
+closeCorner.Parent = closeButton
+
+-- Create scrolling frame for player list
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ScrollFrame"
+scrollFrame.Size = UDim2.new(1, -20, 1, -60)
+scrollFrame.Position = UDim2.new(0, 10, 0, 50)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.Parent = mainFrame
+
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0, 8)
+scrollCorner.Parent = scrollFrame
+
+-- Add UI list layout
+local listLayout = Instance.new("UIListLayout")
+listLayout.SortOrder = Enum.SortOrder.Name
+listLayout.Padding = UDim.new(0, 5)
+listLayout.Parent = scrollFrame
+
+-- Function to automatically click the block button using the correct path
+local function autoClickBlock()
+	task.wait(0.5) -- Wait for CoreGui menu to load
+	
+	local success = false
+	
+	-- Use the exact path you provided
+	local blockButton = CoreGui:FindFirstChild("BlockingModalScreen")
+	if blockButton then
+		blockButton = blockButton:FindFirstChild("BlockingModalContainer")
+		if blockButton then
+			blockButton = blockButton:FindFirstChild("BlockingModalContainerWrapper")
+			if blockButton then
+				blockButton = blockButton:FindFirstChild("BlockingModal")
+				if blockButton then
+					blockButton = blockButton:FindFirstChild("AlertModal")
+					if blockButton then
+						blockButton = blockButton:FindFirstChild("AlertContents")
+						if blockButton then
+							blockButton = blockButton:FindFirstChild("Footer")
+							if blockButton then
+								blockButton = blockButton:FindFirstChild("Buttons")
+								if blockButton then
+									blockButton = blockButton:FindFirstChild("3")
+									if blockButton and blockButton:IsA("GuiButton") then
+										-- Try multiple methods to click
+										pcall(function()
+											firesignal(blockButton.MouseButton1Click)
+											success = true
+											print("Successfully auto-blocked player using firesignal!")
+										end)
+										
+										if not success then
+											pcall(function()
+												blockButton.Activated:Fire()
+												success = true
+												print("Successfully auto-blocked player using Activated!")
+											end)
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	if not success then
+		warn("Could not find or click block button at specified path")
+		warn("Path: CoreGui.BlockingModalScreen.BlockingModalContainer.BlockingModalContainerWrapper.BlockingModal.AlertModal.AlertContents.Footer.Buttons.3")
+	end
+end
+
+-- Function to create player button
+local function createPlayerButton(targetPlayer)
+	local button = Instance.new("TextButton")
+	button.Name = targetPlayer.Name
+	button.Size = UDim2.new(1, -10, 0, 40)
+	button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	button.BorderSizePixel = 0
+	button.Text = targetPlayer.Name
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.TextSize = 14
+	button.Font = Enum.Font.Gotham
+	button.TextXAlignment = Enum.TextXAlignment.Left
+	button.TextTruncate = Enum.TextTruncate.AtEnd
+	
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 10)
+	padding.Parent = button
+	
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 6)
+	btnCorner.Parent = button
+	
+	-- Hover effect
+	button.MouseEnter:Connect(function()
+		button.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+	end)
+	
+	button.MouseLeave:Connect(function()
+		button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	end)
+	
+	-- Click to auto-block
+	button.MouseButton1Click:Connect(function()
+		if targetPlayer and targetPlayer:IsA("Player") then
+			print("Attempting to auto-block:", targetPlayer.Name)
+			
+			-- Open the block UI
+			StarterGui:SetCore("PromptBlockPlayer", targetPlayer)
+			
+			-- Attempt to auto-click the block button
+			spawn(autoClickBlock)
+		end
+	end)
+	
+	button.Parent = scrollFrame
+	return button
+end
+
+-- Function to update player list
+local function updatePlayerList()
+	for _, child in pairs(scrollFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr ~= player then -- Don't show yourself
+			createPlayerButton(plr)
+		end
+	end
+	
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+end
+
+-- Initial update
+updatePlayerList()
+
+-- Update when players join or leave
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(updatePlayerList)
+
+-- Update canvas size when layout changes
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+end)
+
+-- Close button functionality
+closeButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- Make GUI draggable
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
+
+-- Toggle with P key
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.P then
+		mainFrame.Visible = not mainFrame.Visible
+	end
+end)
+
+print("Auto-Block GUI loaded! Press P to toggle. Drag the GUI to move it.")
+print("Block button path: CoreGui.BlockingModalScreen...Buttons.3")
