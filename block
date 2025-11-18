@@ -82,57 +82,112 @@ listLayout.Parent = scrollFrame
 
 -- Function to automatically click the block button using the correct path
 local function autoClickBlock()
-	task.wait(0.5) -- Wait for CoreGui menu to load
-	
-	local success = false
-	
-	-- Use the exact path you provided
-	local blockButton = CoreGui:FindFirstChild("BlockingModalScreen")
-	if blockButton then
-		blockButton = blockButton:FindFirstChild("BlockingModalContainer")
-		if blockButton then
-			blockButton = blockButton:FindFirstChild("BlockingModalContainerWrapper")
-			if blockButton then
-				blockButton = blockButton:FindFirstChild("BlockingModal")
-				if blockButton then
-					blockButton = blockButton:FindFirstChild("AlertModal")
-					if blockButton then
-						blockButton = blockButton:FindFirstChild("AlertContents")
-						if blockButton then
-							blockButton = blockButton:FindFirstChild("Footer")
-							if blockButton then
-								blockButton = blockButton:FindFirstChild("Buttons")
-								if blockButton then
-									blockButton = blockButton:FindFirstChild("3")
-									if blockButton and blockButton:IsA("GuiButton") then
-										-- Try multiple methods to click
-										pcall(function()
-											firesignal(blockButton.MouseButton1Click)
-											success = true
-											print("Successfully auto-blocked player using firesignal!")
-										end)
-										
-										if not success then
-											pcall(function()
-												blockButton.Activated:Fire()
-												success = true
-												print("Successfully auto-blocked player using Activated!")
-											end)
-										end
-									end
-								end
-							end
-						end
-					end
+	spawn(function()
+		local success = false
+		local maxWaitTime = 10
+		local startTime = tick()
+		
+		print("Waiting for BlockingModalScreen to appear...")
+		
+		-- Wait for BlockingModalScreen to appear in CoreGui
+		local blockingModalScreen
+		repeat
+			blockingModalScreen = CoreGui:FindFirstChild("BlockingModalScreen")
+			task.wait(0.05)
+		until blockingModalScreen or (tick() - startTime) > maxWaitTime
+		
+		if not blockingModalScreen then
+			warn("BlockingModalScreen did not appear within", maxWaitTime, "seconds")
+			return
+		end
+		
+		print("BlockingModalScreen found!")
+		
+		-- Now wait for the actual button to exist using WaitForChild
+		local container = blockingModalScreen:WaitForChild("BlockingModalContainer", 3)
+		if not container then warn("BlockingModalContainer not found") return end
+		
+		local wrapper = container:WaitForChild("BlockingModalContainerWrapper", 3)
+		if not wrapper then warn("BlockingModalContainerWrapper not found") return end
+		
+		local modal = wrapper:WaitForChild("BlockingModal", 3)
+		if not modal then warn("BlockingModal not found") return end
+		
+		local alertModal = modal:WaitForChild("AlertModal", 3)
+		if not alertModal then warn("AlertModal not found") return end
+		
+		local contents = alertModal:WaitForChild("AlertContents", 3)
+		if not contents then warn("AlertContents not found") return end
+		
+		local footer = contents:WaitForChild("Footer", 3)
+		if not footer then warn("Footer not found") return end
+		
+		local buttons = footer:WaitForChild("Buttons", 3)
+		if not buttons then warn("Buttons not found") return end
+		
+		local blockButton = buttons:WaitForChild("3", 3)
+		if not blockButton then 
+			warn("Button '3' not found")
+			-- Debug: print all children
+			print("Available buttons:")
+			for _, child in pairs(buttons:GetChildren()) do
+				print(" -", child.Name, child.ClassName)
+			end
+			return 
+		end
+		
+		print("Block button found! Type:", blockButton.ClassName)
+		
+		-- Wait a bit more for button to be fully ready
+		task.wait(0.3)
+		
+		-- Try multiple clicking methods
+		local methods = {
+			function()
+				firesignal(blockButton.MouseButton1Click)
+				print("Tried: firesignal(MouseButton1Click)")
+			end,
+			function()
+				firesignal(blockButton.MouseButton1Down)
+				task.wait(0.05)
+				firesignal(blockButton.MouseButton1Up)
+				print("Tried: firesignal(MouseButton1Down + Up)")
+			end,
+			function()
+				firesignal(blockButton.Activated)
+				print("Tried: firesignal(Activated)")
+			end,
+			function()
+				for _, connection in pairs(getconnections(blockButton.MouseButton1Click)) do
+					connection:Fire()
 				end
+				print("Tried: getconnections(MouseButton1Click)")
+			end,
+			function()
+				for _, connection in pairs(getconnections(blockButton.Activated)) do
+					connection:Fire()
+				end
+				print("Tried: getconnections(Activated)")
+			end
+		}
+		
+		for i, method in ipairs(methods) do
+			local s, err = pcall(method)
+			if s then
+				success = true
+				print("Method", i, "executed successfully!")
+				task.wait(0.1)
+			else
+				warn("Method", i, "failed:", err)
 			end
 		end
-	end
-	
-	if not success then
-		warn("Could not find or click block button at specified path")
-		warn("Path: CoreGui.BlockingModalScreen.BlockingModalContainer.BlockingModalContainerWrapper.BlockingModal.AlertModal.AlertContents.Footer.Buttons.3")
-	end
+		
+		if success then
+			print("Auto-block attempt completed!")
+		else
+			warn("All methods failed to click the button")
+		end
+	end)
 end
 
 -- Function to create player button
