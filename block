@@ -1,4 +1,4 @@
--- EXECUTOR-ONLY SCRIPT - Will NOT work in published games or normal LocalScripts
+-- ngr-ONLY SCRIPT - Will NOT work in published games or normal LocalScripts
 -- For testing purposes only in private servers with an executor
 
 local Players = game:GetService("Players")
