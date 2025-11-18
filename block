@@ -1,4 +1,4 @@
--- EXECUTOR-ONLY SCRIPT - Will NOT work in published games or normal LocalScripts
+-- gfgfgfggggggggg
 -- For testing purposes only in private servers with an executor
 
 local Players = game:GetService("Players")
@@ -87,6 +87,7 @@ local function autoClickBlock()
 		local maxWaitTime = 10
 		local startTime = tick()
 		
+		print("=== AUTO-BLOCK DEBUG START ===")
 		print("Waiting for BlockingModalScreen to appear...")
 		
 		-- Wait for BlockingModalScreen to appear in CoreGui
@@ -97,95 +98,172 @@ local function autoClickBlock()
 		until blockingModalScreen or (tick() - startTime) > maxWaitTime
 		
 		if not blockingModalScreen then
-			warn("BlockingModalScreen did not appear within", maxWaitTime, "seconds")
+			warn("❌ BlockingModalScreen did not appear within", maxWaitTime, "seconds")
+			print("=== Checking what's in CoreGui: ===")
+			for _, child in pairs(CoreGui:GetChildren()) do
+				print(" - " .. child.Name)
+			end
 			return
 		end
 		
-		print("BlockingModalScreen found!")
+		print("✅ BlockingModalScreen found!")
 		
 		-- Now wait for the actual button to exist using WaitForChild
 		local container = blockingModalScreen:WaitForChild("BlockingModalContainer", 3)
-		if not container then warn("BlockingModalContainer not found") return end
+		if not container then warn("❌ BlockingModalContainer not found") return end
+		print("✅ BlockingModalContainer found")
 		
 		local wrapper = container:WaitForChild("BlockingModalContainerWrapper", 3)
-		if not wrapper then warn("BlockingModalContainerWrapper not found") return end
+		if not wrapper then warn("❌ BlockingModalContainerWrapper not found") return end
+		print("✅ BlockingModalContainerWrapper found")
 		
 		local modal = wrapper:WaitForChild("BlockingModal", 3)
-		if not modal then warn("BlockingModal not found") return end
+		if not modal then warn("❌ BlockingModal not found") return end
+		print("✅ BlockingModal found")
 		
 		local alertModal = modal:WaitForChild("AlertModal", 3)
-		if not alertModal then warn("AlertModal not found") return end
+		if not alertModal then warn("❌ AlertModal not found") return end
+		print("✅ AlertModal found")
 		
 		local contents = alertModal:WaitForChild("AlertContents", 3)
-		if not contents then warn("AlertContents not found") return end
+		if not contents then warn("❌ AlertContents not found") return end
+		print("✅ AlertContents found")
 		
 		local footer = contents:WaitForChild("Footer", 3)
-		if not footer then warn("Footer not found") return end
+		if not footer then warn("❌ Footer not found") return end
+		print("✅ Footer found")
 		
 		local buttons = footer:WaitForChild("Buttons", 3)
-		if not buttons then warn("Buttons not found") return end
+		if not buttons then warn("❌ Buttons not found") return end
+		print("✅ Buttons found")
+		
+		print("=== Checking all buttons in Buttons container: ===")
+		for _, child in pairs(buttons:GetChildren()) do
+			print(" - Name: " .. child.Name .. " | Class: " .. child.ClassName)
+			if child:IsA("TextButton") or child:IsA("ImageButton") then
+				print("   Text: " .. tostring(child.Text))
+			end
+		end
 		
 		local blockButton = buttons:WaitForChild("3", 3)
 		if not blockButton then 
-			warn("Button '3' not found")
-			-- Debug: print all children
-			print("Available buttons:")
+			warn("❌ Button '3' not found - trying to find block button by text instead")
+			-- Try to find it by searching for "Block" text
 			for _, child in pairs(buttons:GetChildren()) do
-				print(" -", child.Name, child.ClassName)
+				if child:IsA("TextButton") and child.Text and child.Text:lower():find("block") then
+					blockButton = child
+					print("✅ Found block button by text:", child.Name)
+					break
+				end
 			end
-			return 
+			
+			if not blockButton then
+				warn("❌ Could not find block button at all")
+				return
+			end
+		else
+			print("✅ Button '3' found!")
 		end
 		
-		print("Block button found! Type:", blockButton.ClassName)
+		print("=== Block Button Info ===")
+		print("Name:", blockButton.Name)
+		print("ClassName:", blockButton.ClassName)
+		print("Text:", tostring(blockButton.Text))
+		print("Visible:", blockButton.Visible)
+		print("Active:", blockButton.Active)
 		
 		-- Wait a bit more for button to be fully ready
-		task.wait(0.3)
+		task.wait(0.5)
 		
-		-- Try multiple clicking methods
-		local methods = {
-			function()
-				firesignal(blockButton.MouseButton1Click)
-				print("Tried: firesignal(MouseButton1Click)")
-			end,
-			function()
-				firesignal(blockButton.MouseButton1Down)
+		print("=== Attempting to click button - trying direct callback execution ===")
+		
+		-- Method 1: Try to get and execute the actual callback functions
+		pcall(function()
+			local connections = getconnections(blockButton.Activated)
+			print("Found", #connections, "Activated connections")
+			for i, connection in pairs(connections) do
+				print("Connection", i, "info:")
+				print(" - Enabled:", connection.Enabled)
+				print(" - ForeignState:", connection.ForeignState)
+				
+				-- Try different ways to execute
+				pcall(function()
+					connection.Function()
+					print("✅ Directly called connection.Function()")
+					success = true
+				end)
+				
+				pcall(function()
+					connection:Fire()
+					print("✅ Called connection:Fire()")
+					success = true
+				end)
+				
+				pcall(function()
+					connection.Fire()
+					print("✅ Called connection.Fire()")
+					success = true
+				end)
+			end
+		end)
+		
+		task.wait(0.2)
+		
+		-- Method 2: Try MouseButton1Click connections
+		pcall(function()
+			local connections = getconnections(blockButton.MouseButton1Click)
+			print("Found", #connections, "MouseButton1Click connections")
+			for i, connection in pairs(connections) do
+				print("Connection", i, "info:")
+				print(" - Enabled:", connection.Enabled)
+				
+				pcall(function()
+					connection.Function()
+					print("✅ Directly called connection.Function()")
+					success = true
+				end)
+				
+				pcall(function()
+					connection:Fire()
+					print("✅ Called connection:Fire()")
+					success = true
+				end)
+			end
+		end)
+		
+		task.wait(0.2)
+		
+		-- Method 3: Try disabling then re-enabling and firing
+		pcall(function()
+			local connections = getconnections(blockButton.Activated)
+			for _, connection in pairs(connections) do
+				connection:Disable()
 				task.wait(0.05)
-				firesignal(blockButton.MouseButton1Up)
-				print("Tried: firesignal(MouseButton1Down + Up)")
-			end,
-			function()
-				firesignal(blockButton.Activated)
-				print("Tried: firesignal(Activated)")
-			end,
-			function()
-				for _, connection in pairs(getconnections(blockButton.MouseButton1Click)) do
-					connection:Fire()
-				end
-				print("Tried: getconnections(MouseButton1Click)")
-			end,
-			function()
-				for _, connection in pairs(getconnections(blockButton.Activated)) do
-					connection:Fire()
-				end
-				print("Tried: getconnections(Activated)")
-			end
-		}
-		
-		for i, method in ipairs(methods) do
-			local s, err = pcall(method)
-			if s then
+				connection:Enable()
+				connection:Fire()
+				print("✅ Toggled and fired connection")
 				success = true
-				print("Method", i, "executed successfully!")
-				task.wait(0.1)
-			else
-				warn("Method", i, "failed:", err)
 			end
-		end
+		end)
 		
+		task.wait(0.2)
+		
+		-- Method 4: Try setting mouse location and firing input
+		pcall(function()
+			local VirtualInputManager = game:GetService("VirtualInputManager")
+			local pos = blockButton.AbsolutePosition + (blockButton.AbsoluteSize / 2)
+			VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y, 0, true, game, 0)
+			task.wait(0.05)
+			VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y, 0, false, game, 0)
+			print("✅ Used VirtualInputManager")
+			success = true
+		end)
+		
+		print("=== AUTO-BLOCK DEBUG END ===")
 		if success then
-			print("Auto-block attempt completed!")
+			print("✅ At least one method executed - check if player was blocked!")
 		else
-			warn("All methods failed to click the button")
+			warn("❌ All methods failed")
 		end
 	end)
 end
